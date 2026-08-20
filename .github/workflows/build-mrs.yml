@@ -1,0 +1,47 @@
+name: Build ru-blocked-all MRS
+
+on:
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/build-mrs.yml
+      - scripts/build.sh
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-ru-blocked-all-mrs
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Build with official Mihomo
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: ./scripts/build.sh
+
+      - name: Publish changed rule-set
+        run: |
+          if [[ -z "$(git status --porcelain -- ru-blocked-all.mrs)" ]]; then
+            echo "ru-blocked-all.mrs is already current."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- ru-blocked-all.mrs
+          git commit -m "chore: update ru-blocked-all.mrs"
+          git push
+
