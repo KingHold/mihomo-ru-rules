@@ -7,6 +7,7 @@ on:
   push:
     branches:
       - main
+      - codex/publish-mrs-release
     paths:
       - .github/workflows/build-mrs.yml
       - scripts/build.sh
@@ -32,16 +33,52 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
         run: bash ./scripts/build.sh
 
-      - name: Publish changed rule-set
+      - name: Publish changed rule-set as a Release asset
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          if [[ -z "$(git status --porcelain -- ru-blocked-all.mrs)" ]]; then
-            echo "ru-blocked-all.mrs is already current."
+          set -euo pipefail
+
+          asset="ru-blocked-all.mrs"
+          checksum="ru-blocked-all.mrs.sha256"
+          checksum_tmp="${RUNNER_TEMP}/${checksum}"
+          previous_dir="${RUNNER_TEMP}/previous-release"
+          release_tag="latest"
+
+          sha256sum "$asset" > "$checksum_tmp"
+
+          if ! gh release view "$release_tag" >/dev/null 2>&1; then
+            gh release create "$release_tag" \
+              --title "Latest ru-blocked-all MRS" \
+              --notes "Automatically rebuilt from the current RunetFreedom ru-blocked-all list with the latest stable official Mihomo release."
+          fi
+
+          mkdir -p "$previous_dir"
+          release_is_current=false
+          if gh release download "$release_tag" \
+            --pattern "$checksum" \
+            --dir "$previous_dir" 2>/dev/null; then
+            if cmp -s "$checksum_tmp" "$previous_dir/$checksum"; then
+              release_is_current=true
+            fi
+          fi
+
+          if [[ "$release_is_current" == true ]]; then
+            echo "The Release asset is already current."
+          else
+            gh release upload "$release_tag" "$asset" "$checksum_tmp" --clobber
+            echo "Published a new Release asset."
+          fi
+
+          if [[ -f "$checksum" ]] && cmp -s "$checksum_tmp" "$checksum"; then
+            echo "The repository checksum is already current."
             exit 0
           fi
 
+          cp -- "$checksum_tmp" "$checksum"
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -- ru-blocked-all.mrs
-          git commit -m "chore: update ru-blocked-all.mrs"
+          git add -- "$checksum"
+          git commit -m "chore: update ru-blocked-all MRS checksum"
           git push origin "HEAD:${GITHUB_REF_NAME}"
 
