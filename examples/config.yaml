@@ -80,7 +80,7 @@ rule-providers:
     type: http
     behavior: domain
     format: mrs
-    url: "https://raw.githubusercontent.com/KingHold/mihomo-ru-rules/main/ru-blocked-all.mrs"
+    url: "https://github.com/KingHold/mihomo-ru-rules/releases/download/latest/ru-blocked-all.mrs"
     path: ./rule_providers/ru-blocked-all.mrs
     interval: 21600
     proxy: DIRECT
