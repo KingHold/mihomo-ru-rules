@@ -10,6 +10,8 @@
 https://github.com/KingHold/mihomo-ru-rules/releases/download/latest/ru-blocked-all.mrs
 ```
 
+Старый файл в корне репозитория временно сохранён только для безопасного перехода существующих роутеров. Он больше не обновляется; используйте Release-адрес выше.
+
 Пример подключения в Mihomo:
 
 ```yaml
