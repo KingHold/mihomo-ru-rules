@@ -7,7 +7,6 @@ on:
   push:
     branches:
       - main
-      - codex/publish-mrs-release
     paths:
       - .github/workflows/build-mrs.yml
       - scripts/build.sh
