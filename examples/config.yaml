@@ -1,0 +1,121 @@
+# Mihomo on MikroTik hAP ax3
+# RouterOS bridge-VPN: 10.254.253.1/24
+# Mihomo veth-VPN:     10.254.253.2/24
+
+mixed-port: 7890
+allow-lan: true
+bind-address: "*"
+
+mode: rule
+log-level: info
+ipv6: false
+find-process-mode: off
+
+# RunetFreedom GEO databases.
+geodata-mode: true
+geodata-loader: memconservative
+geo-auto-update: true
+geo-update-interval: 6
+geox-url:
+  geoip: "https://raw.githubusercontent.com/runetfreedom/russia-v2ray-rules-dat/release/geoip.dat"
+  geosite: "https://raw.githubusercontent.com/runetfreedom/russia-v2ray-rules-dat/release/geosite.dat"
+
+# Keep the controller on the private container network.
+external-controller: 10.254.253.2:9090
+secret: "CHANGE_ME_STRONG_SECRET"
+
+tun:
+  enable: true
+  stack: system
+  auto-route: true
+  auto-redirect: true
+  auto-detect-interface: true
+  route-exclude-address:
+    - 10.254.253.0/24
+    - 192.168.88.0/24
+
+sniffer:
+  enable: true
+  force-dns-mapping: true
+  parse-pure-ip: true
+  override-destination: false
+  sniff:
+    HTTP:
+      ports:
+        - 80
+        - 8080-8880
+      override-destination: true
+    TLS:
+      ports:
+        - 443
+        - 8443
+    QUIC:
+      ports:
+        - 443
+        - 8443
+
+proxy-providers:
+  BlancVPN:
+    type: http
+    url: "https://example.invalid/BLANCVPN_SUBSCRIPTION_URL"
+    path: ./proxy_providers/blancvpn.yaml
+    interval: 3600
+    proxy: DIRECT
+    health-check:
+      enable: true
+      url: https://cp.cloudflare.com
+      interval: 90
+      timeout: 3000
+      lazy: false
+
+proxy-groups:
+  - name: VPN-AUTO
+    type: url-test
+    use:
+      - BlancVPN
+    tolerance: 50
+
+rule-providers:
+  ru-blocked-all:
+    type: http
+    behavior: domain
+    format: mrs
+    url: "https://raw.githubusercontent.com/KingHold/mihomo-ru-rules/main/ru-blocked-all.mrs"
+    path: ./rule_providers/ru-blocked-all.mrs
+    interval: 21600
+    proxy: DIRECT
+
+rules:
+  # DIRECT exclusions must stay above all VPN rules.
+  - GEOIP,private,DIRECT,no-resolve
+  - GEOIP,ru-whitelist,DIRECT,no-resolve
+  - GEOSITE,ru-available-only-inside,DIRECT
+
+  # Individual service rules.
+  - GEOSITE,youtube,VPN-AUTO
+  - GEOSITE,telegram,VPN-AUTO
+  - GEOIP,telegram,VPN-AUTO,no-resolve
+  - GEOSITE,openai,VPN-AUTO
+  - GEOSITE,tiktok,VPN-AUTO
+  - GEOSITE,discord,VPN-AUTO
+  - GEOSITE,signal,VPN-AUTO
+  - GEOSITE,viber,VPN-AUTO
+  - GEOSITE,facebook,VPN-AUTO
+  - GEOSITE,instagram,VPN-AUTO
+  - DOMAIN-SUFFIX,threads.net,VPN-AUTO
+  - GEOSITE,twitter,VPN-AUTO
+  - GEOIP,twitter,VPN-AUTO,no-resolve
+  - GEOSITE,linkedin,VPN-AUTO
+  - GEOSITE,torproject,VPN-AUTO
+  - GEOSITE,protonmail,VPN-AUTO
+
+  # Maximum RunetFreedom domain list, loaded as a compact MRS provider.
+  - RULE-SET,ru-blocked-all,VPN-AUTO
+
+  # Blocked IP networks from RunetFreedom GEO data.
+  - GEOIP,ru-blocked,VPN-AUTO,no-resolve
+  - GEOIP,ru-blocked-community,VPN-AUTO,no-resolve
+  - GEOIP,re-filter,VPN-AUTO,no-resolve
+
+  - MATCH,DIRECT
+
