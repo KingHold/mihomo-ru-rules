@@ -26,12 +26,12 @@ jobs:
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Build with official Mihomo
         env:
           GITHUB_TOKEN: ${{ github.token }}
-        run: ./scripts/build.sh
+        run: bash ./scripts/build.sh
 
       - name: Publish changed rule-set
         run: |
